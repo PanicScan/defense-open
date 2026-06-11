@@ -11,7 +11,7 @@ use tracing::info;
 pub use intel_gossip::{ThreatDatabase, ThreatMessage};
 
 #[derive(NetworkBehaviour)]
-pub struct defenseBehaviour {
+pub struct DefenseBehaviour {
     pub gossipsub: gossipsub::Behaviour,
     pub mdns: mdns::tokio::Behaviour,
 }
@@ -48,7 +48,7 @@ pub async fn start_node() -> Result<(), Box<dyn Error>> {
                 mdns::tokio::Behaviour::new(mdns::Config::default(), key.public().to_peer_id())
                     .unwrap();
 
-            defenseBehaviour { gossipsub, mdns }
+            DefenseBehaviour { gossipsub, mdns }
         })?
         .with_swarm_config(|c| c.with_idle_connection_timeout(Duration::from_secs(60)))
         .build();
@@ -61,7 +61,7 @@ pub async fn start_node() -> Result<(), Box<dyn Error>> {
                 SwarmEvent::NewListenAddr { address, .. } => {
                     info!("P2P Node Listening on: {}", address);
                 }
-                SwarmEvent::Behaviour(defenseBehaviourEvent::Mdns(mdns::Event::Discovered(
+                SwarmEvent::Behaviour(DefenseBehaviourEvent::Mdns(mdns::Event::Discovered(
                     list,
                 ))) => {
                     for (peer_id, multiaddr) in list {
@@ -69,7 +69,7 @@ pub async fn start_node() -> Result<(), Box<dyn Error>> {
                         swarm.behaviour_mut().gossipsub.add_explicit_peer(&peer_id);
                     }
                 }
-                SwarmEvent::Behaviour(defenseBehaviourEvent::Gossipsub(
+                SwarmEvent::Behaviour(DefenseBehaviourEvent::Gossipsub(
                     gossipsub::Event::Message {
                         propagation_source: peer_id,
                         message_id: _,
