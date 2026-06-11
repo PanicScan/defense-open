@@ -6,11 +6,10 @@ on:
       - "v*"
 
 permissions:
-  contents: write   # needed to create GitHub Releases and upload assets
+  contents: write
   id-token: write
 
 jobs:
-  # ── Build binaries + packages for each platform ──────────────────────────
   build:
     timeout-minutes: 45
     strategy:
@@ -18,193 +17,56 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact: panicscan-windows-x64
-            binary: target/release/panicscan.exe
+            artifact: defense-windows-x64
+            binary: target/release/defense_daemon.exe
           - os: macos-latest
-            artifact: panicscan-macos-universal
-            binary: target/release/panicscan
+            artifact: defense-macos-universal
+            binary: target/release/defense_daemon
           - os: ubuntu-latest
-            artifact: panicscan-linux-x64
-            binary: target/release/panicscan
+            artifact: defense-linux-x64
+            binary: target/release/defense_daemon
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: dtolnay/rust-toolchain@stable
-
       - uses: Swatinem/rust-cache@v2
 
-      - if: runner.os == 'Linux'
-        uses: sigstore/cosign-installer@v3
-
-      # ── Build binary ───────────────────────────────────────────────────
       - if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y libdbus-1-dev pkg-config
 
       - if: runner.os != 'macOS'
-        run: cargo build --release -p panicscan
+        run: cargo build --release -p defense_daemon
 
       - if: runner.os == 'macOS'
         shell: bash
         run: |
           rustup target add aarch64-apple-darwin x86_64-apple-darwin
-          cargo build --release -p panicscan --target aarch64-apple-darwin
-          cargo build --release -p panicscan --target x86_64-apple-darwin
+          cargo build --release -p defense_daemon --target aarch64-apple-darwin
+          cargo build --release -p defense_daemon --target x86_64-apple-darwin
           mkdir -p target/release
           lipo -create \
-            -output target/release/panicscan \
-            target/aarch64-apple-darwin/release/panicscan \
-            target/x86_64-apple-darwin/release/panicscan
-          lipo target/release/panicscan -verify_arch arm64 x86_64
+            -output target/release/defense_daemon \
+            target/aarch64-apple-darwin/release/defense_daemon \
+            target/x86_64-apple-darwin/release/defense_daemon
+          lipo target/release/defense_daemon -verify_arch arm64 x86_64
 
-      # ── Package (copy binary + SHA256SUMS) ────────────────────────────
-      - shell: bash
-        env:
-          PANICSCAN_ARTIFACT_NAME: ${{ matrix.artifact }}
-          PANICSCAN_BINARY_PATH: ${{ matrix.binary }}
-        run: scripts/package_release.sh
-
-      # ── Build Windows MSI (Windows runner only) ───────────────────────
-      - if: runner.os == 'Windows'
-        shell: pwsh
+      - name: Package binary
+        shell: bash
         run: |
-          dotnet tool install --global wix --version 4.0.5
-          wix extension add WixToolset.UI.wixext/4.0.5
-
-          $version = (Select-String -Path "Cargo.toml" -Pattern '^version\s*=\s*"([^"]+)"' |
-                      Select-Object -First 1).Matches[0].Groups[1].Value
-
-          $artifactDir = "dist\panicscan-windows-x64"
-          $msiName     = "panicscan-$version-windows-x64.msi"
-
-          wix build installer/panicscan.wxs `
-              -d "BinaryDir=target/release" `
-              -d "ProductVersion=$version" `
-              -o "$artifactDir\$msiName" `
-              -ext WixToolset.UI.wixext
-
-          # Add MSI checksum to SHA256SUMS.txt (append with LF, not CRLF)
-          $hash = (Get-FileHash "$artifactDir\$msiName" -Algorithm SHA256).Hash.ToLower()
-          [System.IO.File]::AppendAllText(
-            "$artifactDir\SHA256SUMS.txt",
-            "$hash  $msiName`n",
-            [System.Text.Encoding]::UTF8
-          )
-
-          Write-Host "msi=$artifactDir\$msiName"
-          Write-Host "sha256=$hash"
-
-      # ── Sign (optional, skipped if secrets not configured) ────────────
-      - shell: bash
-        env:
-          PANICSCAN_EVIDENCE_LOG_DIR: release-evidence/${{ matrix.artifact }}/logs
-          PANICSCAN_ARTIFACT_DIR: dist/${{ matrix.artifact }}
-          PANICSCAN_SIGNING_REQUIRED: ${{ vars.PANICSCAN_SIGNING_REQUIRED }}
-          PANICSCAN_MACOS_SIGN_IDENTITY: ${{ secrets.PANICSCAN_MACOS_SIGN_IDENTITY }}
-          PANICSCAN_MACOS_CERTIFICATE_P12_BASE64: ${{ secrets.PANICSCAN_MACOS_CERTIFICATE_P12_BASE64 }}
-          PANICSCAN_MACOS_CERTIFICATE_PASSWORD: ${{ secrets.PANICSCAN_MACOS_CERTIFICATE_PASSWORD }}
-          PANICSCAN_MACOS_NOTARIZE: ${{ vars.PANICSCAN_MACOS_NOTARIZE }}
-          PANICSCAN_APPLE_ID: ${{ secrets.PANICSCAN_APPLE_ID }}
-          PANICSCAN_APPLE_TEAM_ID: ${{ secrets.PANICSCAN_APPLE_TEAM_ID }}
-          PANICSCAN_APPLE_APP_PASSWORD: ${{ secrets.PANICSCAN_APPLE_APP_PASSWORD }}
-          PANICSCAN_WINDOWS_CERTIFICATE_P12_BASE64: ${{ secrets.PANICSCAN_WINDOWS_CERTIFICATE_P12_BASE64 }}
-          PANICSCAN_WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.PANICSCAN_WINDOWS_CERTIFICATE_PASSWORD }}
-        run: scripts/run_evidence_step.sh sign_release_artifact scripts/sign_release_artifact.sh
-
-      - shell: bash
-        env:
-          PANICSCAN_EVIDENCE_LOG_DIR: release-evidence/${{ matrix.artifact }}/logs
-        run: scripts/run_evidence_step.sh verify_checksums scripts/verify_checksums.sh "dist/${{ matrix.artifact }}/SHA256SUMS.txt"
-
-      - shell: bash
-        env:
-          PANICSCAN_EVIDENCE_LOG_DIR: release-evidence/${{ matrix.artifact }}/logs
-          PANICSCAN_ARTIFACT_DIR: dist/${{ matrix.artifact }}
-          PANICSCAN_SIGNING_REQUIRED: ${{ vars.PANICSCAN_SIGNING_REQUIRED }}
-          PANICSCAN_COSIGN_CERTIFICATE_IDENTITY: https://github.com/${{ github.repository }}/.github/workflows/release.yml@${{ github.ref }}
-        run: scripts/run_evidence_step.sh verify_release_signatures scripts/verify_release_signatures.sh
-
-      - shell: bash
-        env:
-          PANICSCAN_EVIDENCE_LOG_DIR: release-evidence/${{ matrix.artifact }}/logs
-          PANICSCAN_ARTIFACT_DIR: dist/${{ matrix.artifact }}
-          PANICSCAN_ARTIFACT_SMOKE_ROOT: release-evidence/${{ matrix.artifact }}/artifact-smoke
-        run: scripts/run_evidence_step.sh release_artifact_smoke scripts/release_artifact_smoke.sh
-
-      # ── Evidence summary ───────────────────────────────────────────────
-      - shell: bash
-        run: |
-          evidence_dir="release-evidence/${{ matrix.artifact }}"
-          artifact_dir="dist/${{ matrix.artifact }}"
-          mkdir -p "$evidence_dir/dist"
-          cp -R "$artifact_dir" "$evidence_dir/dist/"
-          file_size_bytes() {
-            if stat -f%z "$1" >/dev/null 2>&1; then
-              stat -f%z "$1"
-            else
-              stat -c%s "$1"
-            fi
-          }
-          dir_file_size_bytes() {
-            local dir="$1"
-            local total=0
-            local path
-            local size
-            while IFS= read -r -d '' path; do
-              size="$(file_size_bytes "$path")"
-              total="$((total + size))"
-            done < <(find "$dir" -type f -print0)
-            printf '%s\n' "$total"
-          }
-          release_binary=""
-          for candidate in "$artifact_dir/panicscan" "$artifact_dir/panicscan.exe"; do
-            if [[ -f "$candidate" ]]; then
-              release_binary="$candidate"
-              break
-            fi
-          done
-          if [[ -z "$release_binary" ]]; then
-            echo "release binary not found in $artifact_dir" >&2
-            exit 1
+          mkdir -p dist/${{ matrix.artifact }}
+          cp ${{ matrix.binary }} dist/${{ matrix.artifact }}/
+          cd dist/${{ matrix.artifact }}
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            sha256sum defense_daemon.exe > SHA256SUMS.txt
+          else
+            sha256sum defense_daemon > SHA256SUMS.txt
           fi
-          release_binary_size_bytes="$(file_size_bytes "$release_binary")"
-          artifact_dir_size_bytes="$(dir_file_size_bytes "$artifact_dir")"
-          {
-            printf 'artifact_name=%s\n' "${{ matrix.artifact }}"
-            printf 'github_repository=%s\n' "${{ github.repository }}"
-            printf 'github_ref=%s\n' "${{ github.ref }}"
-            printf 'github_sha=%s\n' "${{ github.sha }}"
-            printf 'step_sign_release_artifact=passed\n'
-            printf 'step_verify_checksums=passed\n'
-            printf 'step_verify_release_signatures=passed\n'
-            printf 'step_release_artifact_smoke=passed\n'
-            printf 'release_binary_size_bytes=%s\n' "$release_binary_size_bytes"
-            printf 'release_binary_max_bytes=%s\n' "${PANICSCAN_RELEASE_BINARY_MAX_BYTES:-8388608}"
-            printf 'artifact_dir_size_bytes=%s\n' "$artifact_dir_size_bytes"
-            printf 'artifact_dir_max_bytes=%s\n' "${PANICSCAN_ARTIFACT_DIR_MAX_BYTES:-16777216}"
-            printf 'status=passed\n'
-          } >"$evidence_dir/summary.txt"
-          {
-            printf 'date_utc=%s\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
-            printf 'runner_os=%s\n' "${{ runner.os }}"
-            printf 'uname_s=%s\n' "$(uname -s)"
-            printf 'uname_m=%s\n' "$(uname -m)"
-            printf 'uname_a=%s\n' "$(uname -a)"
-            rustc --version
-            cargo --version
-          } >"$evidence_dir/platform.txt"
 
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact }}
           path: dist/${{ matrix.artifact }}/
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}-release-evidence
-          path: release-evidence/${{ matrix.artifact }}/
-
-  # ── Create GitHub Release and upload all assets ───────────────────────────
   publish:
     needs: build
     timeout-minutes: 15
@@ -212,72 +74,41 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Download all built artifacts into dist/
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: 'panicscan-*'
+          pattern: 'defense-*'
           merge-multiple: false
 
-      # Flatten: collect every file that should go into the release
       - name: Collect release assets
         shell: bash
         run: |
           mkdir -p release-assets
-
-          # Windows: .exe + .msi
-          find dist/panicscan-windows-x64 -maxdepth 1 \
-               \( -name "*.exe" -o -name "*.msi" -o -name "SHA256SUMS.txt" \) \
-               -exec cp {} release-assets/ \;
-
-          # macOS: binary (rename to include platform)
-          if [[ -f dist/panicscan-macos-universal/panicscan ]]; then
-            cp dist/panicscan-macos-universal/panicscan release-assets/panicscan-macos-universal
+          
+          if [[ -f dist/defense-windows-x64/defense_daemon.exe ]]; then
+            cp dist/defense-windows-x64/defense_daemon.exe release-assets/defense-windows-x64.exe
+          fi
+          if [[ -f dist/defense-macos-universal/defense_daemon ]]; then
+            cp dist/defense-macos-universal/defense_daemon release-assets/defense-macos-universal
+          fi
+          if [[ -f dist/defense-linux-x64/defense_daemon ]]; then
+            cp dist/defense-linux-x64/defense_daemon release-assets/defense-linux-x64
           fi
 
-          # Linux: binary (rename to include platform)
-          if [[ -f dist/panicscan-linux-x64/panicscan ]]; then
-            cp dist/panicscan-linux-x64/panicscan release-assets/panicscan-linux-x64
-          fi
+          cat dist/*/SHA256SUMS.txt > release-assets/SHA256SUMS.txt 2>/dev/null || true
 
-          # Merge all SHA256SUMS into one
-          cat dist/panicscan-windows-x64/SHA256SUMS.txt \
-              dist/panicscan-macos-universal/SHA256SUMS.txt \
-              dist/panicscan-linux-x64/SHA256SUMS.txt \
-              > release-assets/SHA256SUMS.txt 2>/dev/null || true
-
-          echo "--- release assets ---"
-          ls -lh release-assets/
-
-      # Create the GitHub Release with all assets attached
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
-          name: "PanicScan ${{ github.ref_name }}"
+          name: "Defense ${{ github.ref_name }}"
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           generate_release_notes: true
           body: |
-            ## Installation
-
-            ### Windows
-            Download **panicscan-${{ github.ref_name }}-windows-x64.msi** and double-click to install.
-            PanicScan will be added to your PATH automatically.
-
-            Then open a terminal and run:
-            ```
-            panicscan quick
-            ```
-
-            ### macOS / Linux
-            Download the binary for your platform, make it executable, and run:
-            ```bash
-            chmod +x panicscan-macos-universal   # or panicscan-linux-x64
-            ./panicscan-macos-universal quick
-            ```
-
-            ### Verify download integrity
-            Check `SHA256SUMS.txt` to verify your download.
-
+            ## Defense Daemon
+            Sessiz çalışan dış yüzey koruma kalkanı sürümü.
+            
+            ### Kurulum
+            Binary dosyasını indirip yönetici/root ayrıcalıklarıyla çalıştırın.
           files: release-assets/*

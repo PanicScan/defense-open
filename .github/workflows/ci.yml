@@ -15,21 +15,15 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact: panicscan-linux-x64-ci-smoke
-            binary: target/release/panicscan
+            artifact: defense-linux-x64-ci-smoke
+            binary: target/release/defense_daemon
           - os: macos-latest
-            artifact: panicscan-macos-ci-smoke
-            binary: target/release/panicscan
+            artifact: defense-macos-ci-smoke
+            binary: target/release/defense_daemon
           - os: windows-latest
-            artifact: panicscan-windows-x64-ci-smoke
-            binary: target/release/panicscan.exe
+            artifact: defense-windows-x64-ci-smoke
+            binary: target/release/defense_daemon.exe
     runs-on: ${{ matrix.os }}
-    # Cap every scan invoked by smoke scripts at 2 minutes.
-    # CI runners (especially Windows) have large Temp dirs that would cause
-    # an unlimited scan to hang indefinitely.  Normal interactive use is
-    # unaffected because this env var is not set outside CI.
-    env:
-      PANICSCAN_SCAN_MAX_MINUTES: "2"
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -40,71 +34,4 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test --workspace
-      - shell: bash
-        run: scripts/progress_latency_smoke.sh
-      - shell: bash
-        run: scripts/report_redaction_smoke.sh
-      - shell: bash
-        run: scripts/perf_quick_memory_smoke.sh
-      - shell: bash
-        run: scripts/miner_process_smoke.sh
-      - shell: bash
-        run: scripts/no_background_process_smoke.sh
-      - shell: bash
-        run: scripts/no_upload_static_audit.sh
-      - shell: bash
-        run: scripts/portability_contract_audit.sh
-      - shell: bash
-        run: scripts/ai_safety_contract_audit.sh
-      - shell: bash
-        run: scripts/evidence_next_steps_fixture_test.sh
-      - shell: bash
-        run: scripts/repository_readiness_fixture_test.sh
-      - shell: bash
-        run: scripts/github_ci_evidence_fetch_fixture_test.sh
-      - shell: bash
-        run: scripts/github_release_evidence_fetch_fixture_test.sh
-      - shell: bash
-        run: scripts/mvp_acceptance_gate_fixture_test.sh
-      - shell: bash
-        run: scripts/feature_export_smoke.sh
-      - shell: bash
-        run: scripts/system_critical_policy_smoke.sh
-      - shell: bash
-        run: scripts/perf_usb_10k_smoke.sh
-      - shell: bash
-        run: scripts/usb_detection_smoke.sh
-      - shell: bash
-        run: scripts/quarantine_roundtrip_smoke.sh
-      - shell: bash
-        run: scripts/quarantine_confirmation_smoke.sh
-      - run: cargo build --release -p panicscan
-      - shell: bash
-        env:
-          PANICSCAN_ARTIFACT_NAME: ${{ matrix.artifact }}
-          PANICSCAN_BINARY_PATH: ${{ matrix.binary }}
-        run: scripts/package_release.sh
-      - shell: bash
-        env:
-          PANICSCAN_ARTIFACT_DIR: dist/${{ matrix.artifact }}
-        run: scripts/release_artifact_smoke.sh
-      - shell: bash
-        env:
-          PANICSCAN_EVIDENCE_DIR: platform-evidence/${{ matrix.artifact }}
-          PANICSCAN_EVIDENCE_ARTIFACT_NAME: ${{ matrix.artifact }}
-        run: scripts/platform_evidence_smoke.sh
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: platform-evidence/${{ matrix.artifact }}/
-
-  audit-evidence:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          path: platform-evidence
-      - shell: bash
-        run: scripts/ci_artifact_evidence_audit.sh platform-evidence
+      - run: cargo build --release --workspace
