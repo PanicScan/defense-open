@@ -60,11 +60,13 @@ def audit_lockfile():
 
 
 def audit_manifests():
-    manifest_paths = [
-        ROOT / "Cargo.toml",
-        ROOT / "crates" / "panicscan-core" / "Cargo.toml",
-        ROOT / "crates" / "panicscan-cli" / "Cargo.toml",
-    ]
+    crates_root = ROOT / "crates"
+    if not crates_root.exists():
+        fail("crates directory is required for no-upload manifest audit")
+
+    manifest_paths = [ROOT / "Cargo.toml"]
+    manifest_paths.extend(sorted(crates_root.glob("*/Cargo.toml")))
+
     for path in manifest_paths:
         if not path.exists():
             fail(f"missing manifest for no-upload audit: {path}")
