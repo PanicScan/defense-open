@@ -19,7 +19,7 @@ thiserror.workspace = true
 tracing.workspace = true
 uuid.workspace = true
 walkdir.workspace = true
-panicscan-ml = { path = "../panicscan-ml" }
+defense-ml = { path = "../defense-ml" }
 netstat2 = "0.11.2"
 tokio = { workspace = true, features = ["rt", "rt-multi-thread"] }
 wifiscanner = "0.5.1"

@@ -1,12 +1,12 @@
-//! PanicScan Daemon — Ana giriş noktası.
+//! defense Daemon — Ana giriş noktası.
 //!
 //! Kullanım:
-//!   panicscan-daemon install    — OS servisini kur
-//!   panicscan-daemon uninstall  — OS servisini kaldır
-//!   panicscan-daemon start      — servisi başlat
-//!   panicscan-daemon stop       — servisi durdur
-//!   panicscan-daemon run        — daemon loop'unu çalıştır (servis tarafından çağrılır)
-//!   panicscan-daemon status     — IPC üzerinden daemon durumunu sorgula
+//!   defense-daemon install    — OS servisini kur
+//!   defense-daemon uninstall  — OS servisini kaldır
+//!   defense-daemon start      — servisi başlat
+//!   defense-daemon stop       — servisi durdur
+//!   defense-daemon run        — daemon loop'unu çalıştır (servis tarafından çağrılır)
+//!   defense-daemon status     — IPC üzerinden daemon durumunu sorgula
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -15,8 +15,8 @@ use clap::{Parser, Subcommand};
 
 #[derive(Debug, Parser)]
 #[command(
-    name = "panicscan-daemon",
-    about = "PanicScan gerçek zamanlı koruma daemon'ı",
+    name = "defense-daemon",
+    about = "defense gerçek zamanlı koruma daemon'ı",
     version
 )]
 struct Cli {
@@ -35,7 +35,7 @@ enum DaemonCommand {
     /// Çalışan servisi durdur.
     Stop,
     /// Daemon loop'unu doğrudan çalıştır — servis tarafından kullanılır.
-    /// Manuel test için: `sudo panicscan-daemon run`
+    /// Manuel test için: `sudo defense-daemon run`
     Run,
     /// IPC üzerinden daemon'ın durumunu göster.
     Status,
@@ -49,7 +49,7 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
             std::env::var("PANICSCAN_LOG")
-                .unwrap_or_else(|_| "panicscan_daemon=info,warn".to_string()),
+                .unwrap_or_else(|_| "defense_daemon=info,warn".to_string()),
         )
         .with_target(false)
         .init();
@@ -61,7 +61,7 @@ async fn main() -> Result<()> {
         DaemonCommand::Uninstall => cmd_uninstall(),
         DaemonCommand::Start => cmd_start(),
         DaemonCommand::Stop => cmd_stop(),
-        DaemonCommand::Run => panicscan_daemon::run_daemon_loop().await,
+        DaemonCommand::Run => defense_daemon::run_daemon_loop().await,
         DaemonCommand::Status => cmd_status().await,
     }
 }
@@ -71,17 +71,17 @@ async fn main() -> Result<()> {
 fn cmd_install() -> Result<()> {
     #[cfg(target_os = "windows")]
     {
-        panicscan_daemon::service::windows::install()
+        defense_daemon::service::windows::install()
     }
 
     #[cfg(target_os = "linux")]
     {
-        panicscan_daemon::service::linux::install()
+        defense_daemon::service::linux::install()
     }
 
     #[cfg(target_os = "macos")]
     {
-        panicscan_daemon::service::macos::install()
+        defense_daemon::service::macos::install()
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
@@ -93,17 +93,17 @@ fn cmd_install() -> Result<()> {
 fn cmd_uninstall() -> Result<()> {
     #[cfg(target_os = "windows")]
     {
-        panicscan_daemon::service::windows::uninstall()
+        defense_daemon::service::windows::uninstall()
     }
 
     #[cfg(target_os = "linux")]
     {
-        panicscan_daemon::service::linux::uninstall()
+        defense_daemon::service::linux::uninstall()
     }
 
     #[cfg(target_os = "macos")]
     {
-        panicscan_daemon::service::macos::uninstall()
+        defense_daemon::service::macos::uninstall()
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
@@ -115,17 +115,17 @@ fn cmd_uninstall() -> Result<()> {
 fn cmd_start() -> Result<()> {
     #[cfg(target_os = "windows")]
     {
-        panicscan_daemon::service::windows::start()
+        defense_daemon::service::windows::start()
     }
 
     #[cfg(target_os = "linux")]
     {
-        panicscan_daemon::service::linux::start()
+        defense_daemon::service::linux::start()
     }
 
     #[cfg(target_os = "macos")]
     {
-        panicscan_daemon::service::macos::start()
+        defense_daemon::service::macos::start()
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
@@ -137,17 +137,17 @@ fn cmd_start() -> Result<()> {
 fn cmd_stop() -> Result<()> {
     #[cfg(target_os = "windows")]
     {
-        panicscan_daemon::service::windows::stop()
+        defense_daemon::service::windows::stop()
     }
 
     #[cfg(target_os = "linux")]
     {
-        panicscan_daemon::service::linux::stop()
+        defense_daemon::service::linux::stop()
     }
 
     #[cfg(target_os = "macos")]
     {
-        panicscan_daemon::service::macos::stop()
+        defense_daemon::service::macos::stop()
     }
 
     #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
@@ -161,7 +161,7 @@ fn cmd_stop() -> Result<()> {
 async fn cmd_status() -> Result<()> {
     // CLI-side IPC client — daemon'a bağlan ve Status isteği gönder.
     // Daemon çalışmıyorsa anlamlı bir hata ver.
-    let socket_path = panicscan_daemon::ipc::socket_path();
+    let socket_path = defense_daemon::ipc::socket_path();
 
     #[cfg(unix)]
     {
@@ -171,7 +171,7 @@ async fn cmd_status() -> Result<()> {
         let stream = UnixStream::connect(&socket_path).await.map_err(|e| {
             anyhow::anyhow!(
                 "Daemon'a bağlanılamadı ({}): {}\n\
-                 Daemon çalışıyor mu? `panicscan-daemon start` ile başlatın.",
+                 Daemon çalışıyor mu? `defense-daemon start` ile başlatın.",
                 socket_path,
                 e
             )
@@ -181,14 +181,14 @@ async fn cmd_status() -> Result<()> {
         let mut reader = BufReader::new(read_half);
 
         let request =
-            serde_json::to_string(&panicscan_daemon::ipc_types::IpcRequest::Status)? + "\n";
+            serde_json::to_string(&defense_daemon::ipc_types::IpcRequest::Status)? + "\n";
         write_half.write_all(request.as_bytes()).await?;
         write_half.flush().await?;
 
         let mut line = String::new();
         reader.read_line(&mut line).await?;
 
-        let response: panicscan_daemon::ipc_types::IpcResponse = serde_json::from_str(line.trim())?;
+        let response: defense_daemon::ipc_types::IpcResponse = serde_json::from_str(line.trim())?;
         print_status_response(response);
     }
 
@@ -200,7 +200,7 @@ async fn cmd_status() -> Result<()> {
         let pipe = ClientOptions::new().open(&socket_path).map_err(|e| {
             anyhow::anyhow!(
                 "Daemon'a bağlanılamadı: {}\n\
-                 Daemon çalışıyor mu? `panicscan-daemon start` ile başlatın.",
+                 Daemon çalışıyor mu? `defense-daemon start` ile başlatın.",
                 e
             )
         })?;
@@ -209,23 +209,23 @@ async fn cmd_status() -> Result<()> {
         let mut reader = BufReader::new(read_half);
 
         let request =
-            serde_json::to_string(&panicscan_daemon::ipc_types::IpcRequest::Status)? + "\n";
+            serde_json::to_string(&defense_daemon::ipc_types::IpcRequest::Status)? + "\n";
         write_half.write_all(request.as_bytes()).await?;
         write_half.flush().await?;
 
         let mut line = String::new();
         reader.read_line(&mut line).await?;
 
-        let response: panicscan_daemon::ipc_types::IpcResponse = serde_json::from_str(line.trim())?;
+        let response: defense_daemon::ipc_types::IpcResponse = serde_json::from_str(line.trim())?;
         print_status_response(response);
     }
 
     Ok(())
 }
 
-fn print_status_response(response: panicscan_daemon::ipc_types::IpcResponse) {
+fn print_status_response(response: defense_daemon::ipc_types::IpcResponse) {
     match response {
-        panicscan_daemon::ipc_types::IpcResponse::Status(s) => {
+        defense_daemon::ipc_types::IpcResponse::Status(s) => {
             let uptime = chrono::Utc::now()
                 .signed_duration_since(s.started_at)
                 .to_std()
@@ -238,7 +238,7 @@ fn print_status_response(response: panicscan_daemon::ipc_types::IpcResponse) {
             );
 
             println!("╔══════════════════════════════════════╗");
-            println!("║     PanicScan Daemon Durumu          ║");
+            println!("║     defense Daemon Durumu          ║");
             println!("╠══════════════════════════════════════╣");
             println!("║ Durum     : ✅ Çalışıyor             ║");
             println!("║ Versiyon  : v{:<28}║", s.version);
@@ -249,7 +249,7 @@ fn print_status_response(response: panicscan_daemon::ipc_types::IpcResponse) {
             println!("║ Koruma    : {}  ║", s.protection_mode);
             println!("╚══════════════════════════════════════╝");
         }
-        panicscan_daemon::ipc_types::IpcResponse::Error { message, .. } => {
+        defense_daemon::ipc_types::IpcResponse::Error { message, .. } => {
             eprintln!("❌ Hata: {message}");
         }
         other => {

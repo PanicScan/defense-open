@@ -9,7 +9,7 @@
 //!   - `notify` crate olayları bir `std::sync::mpsc` kanalına gönderir.
 //!   - `FsWatcherTask` bu kanalı tokio ile async olarak dinler.
 //!   - Her olay uzantı filtresi + cooldown kontrolünden geçer.
-//!   - Geçen dosyalar `panicscan-core` ile taranır (blocking thread'de).
+//!   - Geçen dosyalar `defense-core` ile taranır (blocking thread'de).
 //!   - Yüksek tehditler `events.jsonl`'e yazılır ve sistem bildirimi tetiklenir.
 
 use std::collections::HashMap;
@@ -78,7 +78,7 @@ pub struct FsWatcherTask {
 impl FsWatcherTask {
     pub fn new(state: Arc<DaemonState>) -> Self {
         // Olay log dosyasının yolu.
-        let log_dir = panicscan_dir();
+        let log_dir = defense_dir();
         let _ = std::fs::create_dir_all(&log_dir);
         let event_log_path = log_dir.join("events.jsonl");
 
@@ -306,7 +306,7 @@ fn append_event_log(log_path: &Path, event: &ScanEvent) {
 
 /// Platform-specific sistem bildirimi gönderir.
 fn send_system_notification(path: &str, severity: &str, count: usize) {
-    let title = format!("PanicScan 🚨 {}", severity.to_uppercase());
+    let title = format!("defense 🚨 {}", severity.to_uppercase());
     let body = format!(
         "{count} tehdit bulgusu\n{}",
         // Çok uzun path'leri kısalt.
@@ -331,7 +331,7 @@ $text = $xml.GetElementsByTagName('text');
 $text[0].AppendChild($xml.CreateTextNode('{title}')) | Out-Null;
 $text[1].AppendChild($xml.CreateTextNode('{body}')) | Out-Null;
 $toast = [Windows.UI.Notifications.ToastNotification]::new($xml);
-[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('PanicScan').Show($toast);"#
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('defense').Show($toast);"#
         );
         let _ = std::process::Command::new("powershell")
             .args(["-WindowStyle", "Hidden", "-Command", &script])
@@ -355,17 +355,17 @@ $toast = [Windows.UI.Notifications.ToastNotification]::new($xml);
     }
 }
 
-/// PanicScan veri klasörü yolunu döndürür.
-pub fn panicscan_dir() -> PathBuf {
+/// defense veri klasörü yolunu döndürür.
+pub fn defense_dir() -> PathBuf {
     #[cfg(target_os = "windows")]
     {
         let appdata = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(appdata).join("PanicScan")
+        PathBuf::from(appdata).join("defense")
     }
     #[cfg(not(target_os = "windows"))]
     {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        PathBuf::from(home).join(".panicscan")
+        PathBuf::from(home).join(".defense")
     }
 }
 

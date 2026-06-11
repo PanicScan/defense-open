@@ -41,7 +41,7 @@ pub fn export_feature_vectors(report: &ScanReport) -> FeatureExport {
         .collect::<Vec<_>>();
 
     FeatureExport {
-        schema_version: "panicscan.features.v1".to_string(),
+        schema_version: "defense.features.v1".to_string(),
         source_report_schema_version: report.schema_version.clone(),
         app_version: report.app_version.clone(),
         mode: format!("{:?}", report.mode),

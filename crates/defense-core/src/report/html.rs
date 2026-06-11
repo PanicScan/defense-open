@@ -74,9 +74,9 @@ pub fn render_html(report: &ScanReport) -> String {
     };
 
     format!(
-        "<!doctype html><html><head><meta charset=\"utf-8\"><title>PanicScan Report</title><style>{CSS}</style></head>\
+        "<!doctype html><html><head><meta charset=\"utf-8\"><title>defense Report</title><style>{CSS}</style></head>\
 <body><main>\
-<h1>PanicScan Report</h1>\
+<h1>defense Report</h1>\
 <div class=\"meta\">\
   <span>Mode: <strong>{:?}</strong></span>\
   <span>Scanned files: <strong>{}</strong></span>\

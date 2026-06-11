@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "PanicScan background daemon — real-time EDR service"
+description = "defense background daemon — real-time EDR service"
 
 [lib]
-name = "panicscan_daemon"
+name = "defense_daemon"
 path = "src/lib.rs"
 
 [[bin]]

@@ -1,10 +1,10 @@
 //! OS servis entegrasyonu — kurulum, kaldırma, başlatma, durdurma.
 //!
-//! `panicscan-daemon install`   → servisi OS'e kaydeder
-//! `panicscan-daemon uninstall` → servisi OS'ten kaldırır
-//! `panicscan-daemon start`     → servisi başlatır
-//! `panicscan-daemon stop`      → servisi durdurur
-//! `panicscan-daemon run`       → daemon loop'unu çalıştırır (servis tarafından çağrılır)
+//! `defense-daemon install`   → servisi OS'e kaydeder
+//! `defense-daemon uninstall` → servisi OS'ten kaldırır
+//! `defense-daemon start`     → servisi başlatır
+//! `defense-daemon stop`      → servisi durdurur
+//! `defense-daemon run`       → daemon loop'unu çalıştırır (servis tarafından çağrılır)
 
 use anyhow::Result;
 
@@ -25,8 +25,8 @@ pub mod windows {
         service_manager::{ServiceManager, ServiceManagerAccess},
     };
 
-    const SERVICE_NAME: &str = "PanicScanDaemon";
-    const SERVICE_DISPLAY: &str = "PanicScan Real-Time Protection";
+    const SERVICE_NAME: &str = "defenseDaemon";
+    const SERVICE_DISPLAY: &str = "defense Real-Time Protection";
 
     /// Servisi Windows Service Control Manager'a kaydeder.
     pub fn install() -> Result<()> {
@@ -55,7 +55,7 @@ pub mod windows {
         // Şimdilik install yeterli.
 
         println!("✅ Servis kuruldu: {SERVICE_NAME}");
-        println!("   Başlatmak için: panicscan-daemon start");
+        println!("   Başlatmak için: defense-daemon start");
         Ok(())
     }
 
@@ -152,14 +152,14 @@ pub mod linux {
     use super::*;
     use tracing::info;
 
-    const SERVICE_FILE: &str = "/etc/systemd/system/panicscan.service";
+    const SERVICE_FILE: &str = "/etc/systemd/system/defense.service";
 
     /// systemd unit dosyasını /etc/systemd/system/ altına yazar ve `enable` eder.
     pub fn install() -> Result<()> {
         let exe = std::env::current_exe()?;
         let unit = format!(
             r#"[Unit]
-Description=PanicScan Real-Time Protection Daemon
+Description=defense Real-Time Protection Daemon
 After=network.target
 StartLimitIntervalSec=60
 StartLimitBurst=3
@@ -171,7 +171,7 @@ Restart=always
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
-SyslogIdentifier=panicscan-daemon
+SyslogIdentifier=defense-daemon
 
 [Install]
 WantedBy=multi-user.target
@@ -190,42 +190,42 @@ WantedBy=multi-user.target
         }
 
         let status = std::process::Command::new("systemctl")
-            .args(["enable", "panicscan"])
+            .args(["enable", "defense"])
             .status()?;
         if !status.success() {
-            anyhow::bail!("systemctl enable panicscan başarısız");
+            anyhow::bail!("systemctl enable defense başarısız");
         }
 
-        println!("✅ panicscan servisi kuruldu ve etkinleştirildi.");
-        println!("   Başlatmak için: sudo systemctl start panicscan");
+        println!("✅ defense servisi kuruldu ve etkinleştirildi.");
+        println!("   Başlatmak için: sudo systemctl start defense");
         Ok(())
     }
 
     pub fn uninstall() -> Result<()> {
         let _ = std::process::Command::new("systemctl")
-            .args(["disable", "--now", "panicscan"])
+            .args(["disable", "--now", "defense"])
             .status();
         let _ = std::fs::remove_file(SERVICE_FILE);
         let _ = std::process::Command::new("systemctl")
             .args(["daemon-reload"])
             .status();
-        println!("🗑️  panicscan servisi kaldırıldı.");
+        println!("🗑️  defense servisi kaldırıldı.");
         Ok(())
     }
 
     pub fn start() -> Result<()> {
         std::process::Command::new("systemctl")
-            .args(["start", "panicscan"])
+            .args(["start", "defense"])
             .status()?;
-        println!("▶️  panicscan başlatıldı.");
+        println!("▶️  defense başlatıldı.");
         Ok(())
     }
 
     pub fn stop() -> Result<()> {
         std::process::Command::new("systemctl")
-            .args(["stop", "panicscan"])
+            .args(["stop", "defense"])
             .status()?;
-        println!("⏹️  panicscan durduruldu.");
+        println!("⏹️  defense durduruldu.");
         Ok(())
     }
 }
@@ -236,12 +236,12 @@ WantedBy=multi-user.target
 pub mod macos {
     use super::*;
 
-    const PLIST_LABEL: &str = "com.panicscan.daemon";
-    const PLIST_PATH: &str = "/Library/LaunchDaemons/com.panicscan.daemon.plist";
+    const PLIST_LABEL: &str = "com.defense.daemon";
+    const PLIST_PATH: &str = "/Library/LaunchDaemons/com.defense.daemon.plist";
 
     pub fn install() -> Result<()> {
         let exe = std::env::current_exe()?;
-        let log_dir = "/var/log/panicscan";
+        let log_dir = "/var/log/defense";
         std::fs::create_dir_all(log_dir)?;
 
         let plist = format!(
@@ -280,7 +280,7 @@ pub mod macos {
             .status()?;
 
         if status.success() {
-            println!("✅ panicscan launchd daemon kuruldu: {PLIST_PATH}");
+            println!("✅ defense launchd daemon kuruldu: {PLIST_PATH}");
         } else {
             anyhow::bail!("launchctl load başarısız");
         }
@@ -293,7 +293,7 @@ pub mod macos {
             .args(["unload", "-w", PLIST_PATH])
             .status();
         let _ = std::fs::remove_file(PLIST_PATH);
-        println!("🗑️  panicscan launchd daemon kaldırıldı.");
+        println!("🗑️  defense launchd daemon kaldırıldı.");
         Ok(())
     }
 
@@ -301,7 +301,7 @@ pub mod macos {
         std::process::Command::new("launchctl")
             .args(["start", PLIST_LABEL])
             .status()?;
-        println!("▶️  panicscan başlatıldı.");
+        println!("▶️  defense başlatıldı.");
         Ok(())
     }
 
@@ -309,7 +309,7 @@ pub mod macos {
         std::process::Command::new("launchctl")
             .args(["stop", PLIST_LABEL])
             .status()?;
-        println!("⏹️  panicscan durduruldu.");
+        println!("⏹️  defense durduruldu.");
         Ok(())
     }
 }

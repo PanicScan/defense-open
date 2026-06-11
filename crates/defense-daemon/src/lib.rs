@@ -12,10 +12,10 @@ use tracing::info;
 
 /// Daemon'ın asıl çalışma döngüsü.
 /// Windows Service, systemd ve launchd bu fonksiyonu çalıştırır.
-/// Manuel test için `panicscan-daemon run` ile de çağrılabilir.
+/// Manuel test için `defense-daemon run` ile de çağrılabilir.
 pub async fn run_daemon_loop() -> Result<()> {
     info!(
-        "🛡️  PanicScan Daemon v{} başlatılıyor...",
+        "🛡️  defense Daemon v{} başlatılıyor...",
         env!("CARGO_PKG_VERSION")
     );
 
@@ -38,8 +38,8 @@ pub async fn run_daemon_loop() -> Result<()> {
     });
 
     info!("✅ Daemon hazır. IPC kanalı açık: {}", ipc::socket_path());
-    info!("   Durumu görmek için: panicscan-daemon status");
-    info!("   Durdurmak için:     panicscan-daemon stop");
+    info!("   Durumu görmek için: defense-daemon status");
+    info!("   Durdurmak için:     defense-daemon stop");
 
     // 4. Dosya sistemi izleyiciyi arka planda başlat.
     let watcher_dirs = watch_dirs.clone();
@@ -84,6 +84,6 @@ pub async fn run_daemon_loop() -> Result<()> {
         }
     }
 
-    info!("🛑 PanicScan Daemon kapatıldı.");
+    info!("🛑 defense Daemon kapatıldı.");
     Ok(())
 }

@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::report::{Evidence, EvidenceKind};
 use crate::rules::schema::PanicRule;
 
-const BUILTIN_RULES_JSON: &str = include_str!("../../../../rules/builtin/miner.panicscan.json");
+const BUILTIN_RULES_JSON: &str = include_str!("../../../../rules/builtin/miner.defense.json");
 
 #[derive(Debug, Clone, Default)]
 pub struct RuleEngine {
@@ -16,7 +16,7 @@ impl RuleEngine {
     }
 
     pub fn builtin() -> Self {
-        Self::from_json_str(BUILTIN_RULES_JSON).expect("built-in PanicScan rules must parse")
+        Self::from_json_str(BUILTIN_RULES_JSON).expect("built-in defense rules must parse")
     }
 
     pub fn from_json_str(text: &str) -> Result<Self, serde_json::Error> {

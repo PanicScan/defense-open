@@ -156,7 +156,7 @@ mod tests {
 
     #[test]
     fn windows_targets_can_be_planned_without_windows_host() {
-        let home = PathBuf::from("C:\\Users\\PanicScan");
+        let home = PathBuf::from("C:\\Users\\defense");
         let targets = quick_targets_for(PlatformFamily::Windows, Some(&home));
         let labels = target_labels(&targets);
 

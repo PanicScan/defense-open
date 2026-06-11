@@ -1,9 +1,9 @@
-//! IPC sunucusu — `panicscan-cli`'ın bağlanacağı dinleyici.
+//! IPC sunucusu — `defense-cli`'ın bağlanacağı dinleyici.
 //!
 //! Platform seçimi:
-//!   Windows : Named Pipe  (`\\.\pipe\panicscan-daemon`)
-//!   Linux   : Unix Socket (`/run/panicscan/daemon.sock`)
-//!   macOS   : Unix Socket (`/tmp/panicscan-daemon.sock`)
+//!   Windows : Named Pipe  (`\\.\pipe\defense-daemon`)
+//!   Linux   : Unix Socket (`/run/defense/daemon.sock`)
+//!   macOS   : Unix Socket (`/tmp/defense-daemon.sock`)
 //!
 //! Protokol: newline-delimited JSON — her satır bir `IpcRequest` veya
 //! `IpcResponse`. Basit, insan-okunabilir, debug kolaylığı sağlar.
@@ -23,22 +23,22 @@ use crate::state::DaemonState;
 pub fn socket_path() -> String {
     #[cfg(target_os = "windows")]
     {
-        r"\\.\pipe\panicscan-daemon".to_string()
+        r"\\.\pipe\defense-daemon".to_string()
     }
 
     #[cfg(target_os = "macos")]
     {
-        "/tmp/panicscan-daemon.sock".to_string()
+        "/tmp/defense-daemon.sock".to_string()
     }
 
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
-        // Linux: /run/panicscan/daemon.sock (root) veya /tmp (kullanıcı testi)
-        let run_dir = std::path::Path::new("/run/panicscan");
+        // Linux: /run/defense/daemon.sock (root) veya /tmp (kullanıcı testi)
+        let run_dir = std::path::Path::new("/run/defense");
         if run_dir.exists() {
-            "/run/panicscan/daemon.sock".to_string()
+            "/run/defense/daemon.sock".to_string()
         } else {
-            "/tmp/panicscan-daemon.sock".to_string()
+            "/tmp/defense-daemon.sock".to_string()
         }
     }
 }
@@ -206,7 +206,7 @@ async fn dispatch(request: IpcRequest, state: Arc<DaemonState>) -> IpcResponse {
 
         IpcRequest::ScanFile { path } => {
             info!("Manuel tarama isteği: {path}");
-            // Faz 1'de doğrudan panicscan-core'u çağır.
+            // Faz 1'de doğrudan defense-core'u çağır.
             // İleride bu da daemon event loop'una gidecek.
             use crate::ipc_types::ScanResultSummary;
             use chrono::Utc;

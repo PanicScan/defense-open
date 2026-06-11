@@ -1,4 +1,4 @@
-//! PanicScan Daemon — IPC message protocol
+//! defense Daemon — IPC message protocol
 //!
 //! Her mesaj newline-delimited JSON. Tek bir TCP veya Unix socket bağlantısı
 //! üzerinden seri olarak gönderilir.

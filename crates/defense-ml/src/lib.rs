@@ -18,9 +18,9 @@ impl Default for MlEngine {
 }
 
 impl MlEngine {
-    /// panicscan_rf.onnx modelini Rust binary'si içerisinden yükler.
+    /// defense_rf.onnx modelini Rust binary'si içerisinden yükler.
     pub fn new() -> Result<Self> {
-        let model_bytes = include_bytes!("../../../ml_pipeline/panicscan_rf.onnx");
+        let model_bytes = include_bytes!("../../../ml_pipeline/defense_rf.onnx");
         let mut reader = std::io::Cursor::new(model_bytes);
 
         let model = tract_onnx::onnx()

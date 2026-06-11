@@ -92,12 +92,12 @@ mod feature_tests {
             scanned_files: 1,
             scanned_persistence_entries: 0,
             findings: vec![Finding {
-                id: "raw-/Users/PanicScanSecretUser/Downloads/run.ps1".to_string(),
+                id: "raw-/Users/defenseSecretUser/Downloads/run.ps1".to_string(),
                 severity: FindingSeverity::High,
                 score: 77,
                 title: "Suspicious script".to_string(),
                 explanation: "Encoded PowerShell".to_string(),
-                item_path: Some("/Users/PanicScanSecretUser/Downloads/run.ps1".to_string()),
+                item_path: Some("/Users/defenseSecretUser/Downloads/run.ps1".to_string()),
                 process_id: None,
                 persistence_location: None,
                 evidences: vec![Evidence {
@@ -115,7 +115,7 @@ mod feature_tests {
         let export = features::export_feature_vectors(&report);
         let json = serde_json::to_string(&export).expect("serialize feature export");
 
-        assert_eq!(export.schema_version, "panicscan.features.v1");
+        assert_eq!(export.schema_version, "defense.features.v1");
         assert_eq!(export.source_report_schema_version, "1");
         assert_eq!(export.vectors.len(), 1);
         assert_eq!(export.vectors[0].finding_ref, "finding-000001");
@@ -126,7 +126,7 @@ mod feature_tests {
             vec!["script.encoded_powershell"]
         );
         assert_eq!(export.vectors[0].evidence_weight_sum, 80);
-        assert!(!json.contains("PanicScanSecretUser"));
+        assert!(!json.contains("defenseSecretUser"));
         assert!(!json.contains("/Users/"));
         assert!(!json.contains("raw-"));
     }
