@@ -1,0 +1,14 @@
+/target/
+/dist/
+/platform-evidence/
+/release-evidence/
+/physical-usb-evidence/
+/.idea/
+/.vscode/
+.DS_Store
+*.log
+*.tmp
+*.defense.json
+*.defense.html
+!/rules/
+!/rules/**

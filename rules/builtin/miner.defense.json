@@ -1,0 +1,10 @@
+[
+  {
+    "id": "miner-pool-string",
+    "title": "Mining pool connection string",
+    "evidence_kind": "miner",
+    "weight": 35,
+    "ascii_contains": ["stratum+tcp", "stratum+ssl", "supportxmr", "nanopool"],
+    "extensions": ["exe", "dll", "ps1", "bat", "cmd", "sh", "bin"]
+  }
+]

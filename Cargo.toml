@@ -1,0 +1,23 @@
+[workspace]
+resolver = "2"
+members = ["crates/defense-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/Defense-open/defense-open"
+
+[workspace.dependencies]
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+goblin = "0.9"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+sysinfo = "0.30"
+tempfile = "3"
+uuid = { version = "1", features = ["v4", "serde"] }
+walkdir = "2"
+winreg = "0.52"
+tokio = { version = "1", features = ["rt", "rt-multi-thread", "time"] }
