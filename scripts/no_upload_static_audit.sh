@@ -63,6 +63,7 @@ def audit_manifests():
     manifest_paths = [
         ROOT / "Cargo.toml",
         ROOT / "crates" / "defense-core" / "Cargo.toml",
+        ROOT / "crates" / "defense-daemon" / "Cargo.toml",
     ]
     for path in manifest_paths:
         if not path.exists():

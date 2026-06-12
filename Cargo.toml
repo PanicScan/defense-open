@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/defense-core"]
+members = ["crates/defense-core", "crates/defense-daemon"]
 
 [workspace.package]
 version = "0.1.0"

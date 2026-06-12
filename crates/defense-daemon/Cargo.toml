@@ -1,0 +1,14 @@
+[package]
+name = "defense-daemon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+chrono.workspace = true
+defense-core = { path = "../defense-core" }
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
